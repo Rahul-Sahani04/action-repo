@@ -1,0 +1,31 @@
+name: Test Webhook Events
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [opened, closed]
+    branches: [ main ]
+
+jobs:
+  test-webhook:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Test Push Event
+      if: github.event_name == 'push'
+      run: |
+        echo "Push event triggered"
+        echo "Branch: ${{ github.ref }}"
+        echo "Author: ${{ github.actor }}"
+        echo "Commit: ${{ github.sha }}"
+    
+    - name: Test Pull Request Event
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Pull request event triggered"
+        echo "Action: ${{ github.event.action }}"
+        echo "Author: ${{ github.actor }}"
+        echo "From Branch: ${{ github.head_ref }}"
+        echo "To Branch: ${{ github.base_ref }}"

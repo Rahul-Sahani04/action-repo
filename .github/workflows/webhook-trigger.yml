@@ -1,0 +1,187 @@
+name: GitHub Activity Monitor - Webhook Trigger
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    types: [opened, closed, synchronize]
+    branches: [ main, develop, staging ]
+
+jobs:
+  trigger-webhook:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+    
+    - name: Send Push Event Webhook
+      if: github.event_name == 'push'
+      env:
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      run: |
+        python -c "
+        import requests
+        import json
+        import os
+        
+        webhook_url = os.environ.get('WEBHOOK_URL', 'http://localhost:5001/webhook')
+        
+        payload = {
+          'ref': 'refs/heads/${{ github.ref_name }}',
+          'before': '${{ github.event.before }}',
+          'after': '${{ github.event.after }}',
+          'pusher': {
+            'name': '${{ github.actor }}',
+            'email': '${{ github.actor }}@users.noreply.github.com'
+          },
+          'repository': {
+            'name': '${{ github.event.repository.name }}',
+            'full_name': '${{ github.repository }}',
+            'owner': {
+              'login': '${{ github.repository_owner }}'
+            }
+          }
+        }
+        
+        headers = {
+          'Content-Type': 'application/json',
+          'X-GitHub-Event': 'push',
+          'User-Agent': 'GitHub-Hookshot/abc123'
+        }
+        
+        try:
+          response = requests.post(webhook_url, headers=headers, json=payload)
+          print(f'Push webhook sent: Status {response.status_code}')
+          print(f'Response: {response.text}')
+        except Exception as e:
+          print(f'Error sending webhook: {e}')
+        "
+    
+    - name: Send Pull Request Opened Webhook
+      if: github.event_name == 'pull_request' && github.event.action == 'opened'
+      env:
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      run: |
+        python -c "
+        import requests
+        import json
+        import os
+        
+        webhook_url = os.environ.get('WEBHOOK_URL', 'http://localhost:5001/webhook')
+        
+        payload = {
+          'action': 'opened',
+          'number': ${{ github.event.number }},
+          'pull_request': {
+            'number': ${{ github.event.number }},
+            'user': {
+              'login': '${{ github.event.pull_request.user.login }}'
+            },
+            'head': {
+              'ref': '${{ github.event.pull_request.head.ref }}',
+              'sha': '${{ github.event.pull_request.head.sha }}'
+            },
+            'base': {
+              'ref': '${{ github.event.pull_request.base.ref }}',
+              'sha': '${{ github.event.pull_request.base.sha }}'
+            },
+            'merged': False
+          },
+          'repository': {
+            'name': '${{ github.event.repository.name }}',
+            'full_name': '${{ github.repository }}'
+          }
+        }
+        
+        headers = {
+          'Content-Type': 'application/json',
+          'X-GitHub-Event': 'pull_request',
+          'User-Agent': 'GitHub-Hookshot/abc123'
+        }
+        
+        try:
+          response = requests.post(webhook_url, headers=headers, json=payload)
+          print(f'PR opened webhook sent: Status {response.status_code}')
+          print(f'Response: {response.text}')
+        except Exception as e:
+          print(f'Error sending webhook: {e}')
+        "
+    
+    - name: Send Pull Request Merged Webhook
+      if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+      env:
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      run: |
+        python -c "
+        import requests
+        import json
+        import os
+        
+        webhook_url = os.environ.get('WEBHOOK_URL', 'http://localhost:5001/webhook')
+        
+        payload = {
+          'action': 'closed',
+          'number': ${{ github.event.number }},
+          'pull_request': {
+            'number': ${{ github.event.number }},
+            'user': {
+              'login': '${{ github.event.pull_request.user.login }}'
+            },
+            'merged_by': {
+              'login': '${{ github.event.pull_request.merged_by.login }}'
+            },
+            'head': {
+              'ref': '${{ github.event.pull_request.head.ref }}',
+              'sha': '${{ github.event.pull_request.head.sha }}'
+            },
+            'base': {
+              'ref': '${{ github.event.pull_request.base.ref }}',
+              'sha': '${{ github.event.pull_request.base.sha }}'
+            },
+            'merged': True
+          },
+          'repository': {
+            'name': '${{ github.event.repository.name }}',
+            'full_name': '${{ github.repository }}'
+          }
+        }
+        
+        headers = {
+          'Content-Type': 'application/json',
+          'X-GitHub-Event': 'pull_request',
+          'User-Agent': 'GitHub-Hookshot/abc123'
+        }
+        
+        try:
+          response = requests.post(webhook_url, headers=headers, json=payload)
+          print(f'PR merged webhook sent: Status {response.status_code}')
+          print(f'Response: {response.text}')
+        except Exception as e:
+          print(f'Error sending webhook: {e}')
+        "
+    
+    - name: Log Event Details
+      run: |
+        echo "Event Type: ${{ github.event_name }}"
+        echo "Action: ${{ github.event.action }}"
+        echo "Actor: ${{ github.actor }}"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "PR Number: ${{ github.event.number }}"
+          echo "PR Action: ${{ github.event.action }}"
+          echo "PR Merged: ${{ github.event.pull_request.merged }}"
+          echo "From Branch: ${{ github.event.pull_request.head.ref }}"
+          echo "To Branch: ${{ github.event.pull_request.base.ref }}"
+        fi
