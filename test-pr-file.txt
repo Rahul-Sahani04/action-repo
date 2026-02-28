@@ -1,0 +1,17 @@
+Pull Request Test File
+========================
+
+This file was created to test pull request webhook functionality.
+Created on: $(date)
+
+Purpose: Test pull request events (opened, synchronized, closed/merged)
+Branch: feature/test-webhook-integration
+Target: master/main branch
+
+This file will be used to demonstrate the complete pull request workflow:
+1. Create a new commit on the feature branch
+2. Push the changes to trigger webhook events
+3. Create a pull request to trigger the "opened" event
+4. Merge the pull request to trigger the "closed" event
+
+Testing webhook integration with both local and external receivers.
