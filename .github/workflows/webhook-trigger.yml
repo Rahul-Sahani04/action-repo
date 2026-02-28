@@ -2,10 +2,10 @@ name: GitHub Activity Monitor - Webhook Trigger
 
 on:
   push:
-    branches: [ main, develop, staging ]
+    branches: [ master, main, develop, staging ]
   pull_request:
     types: [opened, closed, synchronize]
-    branches: [ main, develop, staging ]
+    branches: [ master, main, develop, staging ]
 
 jobs:
   trigger-webhook:
